@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<!-- todo: add sign-out button -->
+
+<html>
+  <head>
+    <!-- update the version number as needed -->
+    <script defer src="/__/firebase/4.12.1/firebase-app.js"></script>
+    <!-- include only the Firebase features as you need -->
+    <script defer src="/__/firebase/4.12.1/firebase-auth.js"></script>
+    <script defer src="/__/firebase/4.12.1/firebase-database.js"></script>
+    <script defer src="/__/firebase/4.12.1/firebase-messaging.js"></script>
+    <script defer src="/__/firebase/4.12.1/firebase-storage.js"></script>
+    <!-- initialize the SDK after all desired features are loaded -->
+    <script defer src="/__/firebase/init.js"></script>
+  </head>
+
+  <body>
+    <div id="message">
+      <h2>Hosted by Firebase webservices</h2>
+      <h1>NX cloud database example</h1>
+      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
+    </div>
+    <p id="load">Firebase SDK2 Loading&hellip;</p>
+    <p><span id="signedInAs"></span><span><button id="buttonSignOut" type="button">Sign Out</button></span></p>
+    <div id="divSignedInContent">
+      <div id="divTable">
+      </div>
+      <p><button id="button1" type="button">Submit</button></p>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/4.12.1/firebase.js"></script>
+    <script>
+      // Initialize Firebase
+      var config = {
+        apiKey: "AIzaSyBk_1cxD7l34jlcbsYDsU0BI_6NyQ4GwPs",
+        authDomain: "nx-cloud-base.firebaseapp.com",
+        databaseURL: "https://nx-cloud-base.firebaseio.com",
+        projectId: "nx-cloud-base",
+        storageBucket: "nx-cloud-base.appspot.com",
+        messagingSenderId: "1034233142059"
+      };
+      var mainObjRef; //this will point to MainObject Instance
+      firebase.initializeApp(config);
+      function signMeOut() {
+        firebase.auth().signOut();
+      }
+      document.getElementById("buttonSignOut").onclick = signMeOut;
+
+
+      function createTable() {
+        // Create table.
+        var table = document.createElement('table');
+        table.id = "table1";
+        table.style.border = "1px solid #000"
+        // Insert New Row for table at index '0'.
+        var row1 = table.insertRow(0);
+        
+        var row1col1 = row1.insertCell(0);
+        row1col1.innerHTML = 'Key';
+        
+        var row1col2 = row1.insertCell(1);
+        row1col2.innerHTML = 'Comma separated Name=Value pairs';
+        
+        var row1col3 = row1.insertCell(2);
+        row1col3.innerHTML = 'Delete';
+        
+        // Append Table into div.
+        var div = document.getElementById('divTable');
+        div.appendChild(table);
+      }
+      createTable();
+
+      function makeValue(obj_or_string) {
+        if (typeof obj_or_string === 'object') {
+          var isFirst = true;
+          var result = "";
+          for (var p in obj_or_string) {
+            if( obj_or_string.hasOwnProperty(p) ) {
+              if (!isFirst)
+                result += ", ";
+              result += p + "=" + obj_or_string[p];
+              isFirst = false;
+            } 
+          }              
+          return result;
+        }
+        else if (typeof obj_or_string === 'string') {
+            return obj_or_string;
+        }
+        else 
+          return "!!!ERROR: type " + typeof obj_or_string + " not supported!!!";
+      }
+      
+      function addRow(idx, tab1, key, val) {
+          var inp2_style = "width:1000px;"
+          var row = tab1.insertRow(idx);
+          var rowcol1 = row.insertCell(-1);
+          var rowcol2 = row.insertCell(-1);
+          var rowcol3 = row.insertCell(-1);
+          var inp1 = document.createElement("input");
+          var inp1h = document.createElement("input");
+          inp1h.type='hidden';
+          var inp2 = document.createElement("input");
+          var cbox = document.createElement("input");
+          cbox.type= 'checkbox';
+          rowcol1.appendChild(inp1);
+          rowcol1.appendChild(inp1h);
+          rowcol2.appendChild(inp2);
+          rowcol3.appendChild(cbox);
+          inp1.value = key;
+          inp1h.value = key;
+          inp2.style = inp2_style;
+          inp2.value = makeValue(val);
+          console.log("line " + idx + ", key: " + key + ", val: " + val);
+          return row;
+      }
+      
+      function fillTable() {
+        // Fill the table
+        var tab1 = document.getElementById("table1");
+        var valARef = firebase.database().ref();
+        var inp2_style = "width:1000px;"
+
+        valARef.on('value', function(snapshot) {
+          var idx;
+          for (idx=tab1.rows.length-1;idx>0;idx--)
+            tab1.deleteRow(idx);
+          var row;
+          idx=1;
+          snapshot.forEach(function(childSnapshot) {
+              var val = childSnapshot.val();
+              var key = childSnapshot.key;
+              if (key==="regexp") {
+                for (var property in val) {
+                  if (val.hasOwnProperty(property)) {
+                     var k = property;
+                     var v = val[property];
+                     console.log(property + ":" + val[property]);
+                     k = atob(k);
+                     row = addRow(idx, tab1, k, v);
+                     idx++;
+                   }
+                }
+              }
+              else {
+                row = addRow(idx, tab1, key, val);
+              }
+              idx++;
+          });
+          //add empty row at the end for new stuff to be added
+          var newrow = tab1.insertRow(-1);
+          var rowcol1 = newrow.insertCell(-1);
+          var rowcol2 = newrow.insertCell(-1);
+          var rowcol3 = newrow.insertCell(-1);
+          var inp1 = document.createElement("input");
+          var inp2 = document.createElement("input");
+          inp2.style = inp2_style;
+          var cbox = document.createElement("input");
+          cbox.type= 'checkbox';
+          rowcol1.appendChild(inp1);
+          rowcol2.appendChild(inp2);
+          rowcol3.appendChild(cbox);
+        });
+      }
+
+      function MainObject() {
+        mainObjRef = this;
+        // Shortcuts to Firebase SDK features.
+        this.database = firebase.database();
+        this.storage = firebase.storage();
+
+        // Initiates Firebase auth and listen to auth state changes.
+        firebase.auth().onAuthStateChanged(this.onAuthStateChanged.bind(this));
+        // Return true if the user is signed in Firebase
+
+      }
+      // Triggers when the auth state change for instance when the user signs-in or signs-out.
+      MainObject.prototype.onAuthStateChanged = function(user) {
+        if (user) { // User is signed in!
+
+          // Get profile pic and user's name from the Firebase user object.
+          var profilePicUrl = user.photoURL; // Only change these two lines!
+          var userName = user.displayName;   // Only change these two lines!
+
+          console.log("User signed in with display name " + user.displayName + " and email " + user.email);
+          document.getElementById('signedInAs').innerHTML = 'Signed in as ' + user.displayName + ' (' + user.email + ') ';
+          document.getElementById('buttonSignOut').style.visibility = 'visible';
+          document.getElementById("button1").onclick = buttonFunction;
+
+          function trimString(str) {
+            while (str.charAt(0)===' ')
+              str = str.substr(1);
+            while ((str.length>0) && (str.charAt(str.length-1)===' '))
+              str = str.substr(0, str.length-1);
+            return str;
+          }
+          
+          function isRegExp(k) {
+            if (( k.indexOf('{')>=0) || (k.indexOf('}')>=0) || (k.indexOf('[')>=0) || (k.indexOf(']')>=0) || (k.indexOf('(')>=0) || (k.indexOf(')')>=0) )
+              return true;
+            else
+              return false;
+          }
+          
+          function writeValue(k, v) {
+            k=trimString(k);
+            v=trimString(v);
+            var is_regexp = isRegExp(k);
+            var nameValRef;
+            if (is_regexp) {
+               k = btoa(k);
+               nameValRef = mainObjRef.database.ref("regexp/" + k);
+            }
+            else {
+               nameValRef = mainObjRef.database.ref(k);
+            }
+            //clear whole line before rebuilding it
+            nameValRef.remove();
+            var idxLastEqual = -1;
+            idxLastEqual = v.indexOf("=");
+            if (idxLastEqual<1) {
+              //no '=' present, so this is a plain string value to be stored
+              nameValRef.set(v);
+            }
+            else {
+              while (1) {
+                var k2 = v.substr(0, idxLastEqual);
+                var v2 = v.substr(idxLastEqual+1);
+                var kommaAt = v2.indexOf(',');
+                var nextEqualAt = v2.indexOf('=');
+                if ((kommaAt>=1) && (nextEqualAt>kommaAt+1))
+                {
+                  v = v2.substr(kommaAt+1);
+                  idxLastEqual = v.indexOf("=");
+                  v2 = v2.substr(0, kommaAt);
+                }
+                else
+                  v="";
+                k2 = trimString(k2);
+                var path;
+                if (is_regexp)
+                   path = "regexp/" + k + '/' + k2;
+                else
+                   path = k + '/' + k2;
+                nameValRef = mainObjRef.database.ref(path);
+                v2=trimString(v2);
+                nameValRef.set(v2);
+                if (v.length === 0)
+                    break;
+              }
+            }
+          }
+
+          function buttonFunction() {
+            console.log("buttonFunction executing");
+
+            var tabl = document.getElementById("table1");
+            var r=1;
+            while(row=tabl.rows[r])
+            {
+              var nameValRef;
+              r++;
+              var key = row.cells[0].querySelector('input');
+              //if the name of the key has been changed, remove the old key/value before creating the new one below
+              var oldkey = row.cells[0].querySelector('input[type="hidden"]');
+              if (oldkey && key && (oldkey.value.length>0) && (oldkey.value != key.value))
+              {
+                var oldpath = isRegExp(oldkey.value) ? ("regexp/" + btoa(oldkey.value)) : oldkey.value;
+                nameValRef = mainObjRef.database.ref(oldpath);
+                nameValRef.remove();
+              }
+              
+              var val = row.cells[1].querySelector('input');
+              var del = row.cells[2].querySelector('input');
+              if (key && key.value && key.value.length && val) {
+                if (isRegExp(key.value)) {
+                  nameValRef = mainObjRef.database.ref("regexp/" + btoa(key.value));
+                }
+                else {
+                  nameValRef = mainObjRef.database.ref(key.value);
+                }
+                if (del.checked)
+                  nameValRef.remove();
+                else
+                  writeValue(key.value, val.value);
+               }
+            }
+          }
+          setTimeout(fillTable, 100);
+          document.getElementById('divSignedInContent').style.visibility = 'visible';
+          // We save the Firebase Messaging Device token and enable notifications.
+//          this.saveMessagingDeviceToken();
+        } else { // User is signed out!
+          // Hide user's profile and sign-out button.
+          console.log("User not singed in");
+          var provider = new firebase.auth.GoogleAuthProvider;
+          console.log("initiating auth popup");
+          document.getElementById('signedInAs').innerHTML = 'Currently not signed in';
+          document.getElementById('buttonSignOut').style.visibility = 'hidden';
+          document.getElementById('divSignedInContent').style.visibility = 'hidden';
+          firebase.auth().signInWithPopup(provider);
+        }
+      };
+
+      var mainObj = new MainObject();
+
+    </script>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // // The Firebase SDK is initialized and available here!
+        //
+        // firebase.auth().onAuthStateChanged(user => { });
+        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
+        // firebase.messaging().requestPermission().then(() => { });
+        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
+        //
+
+        try {
+          let app = firebase.app();
+          let features = ['auth', 'database', 'messaging', 'storage'].filter(feature => typeof app[feature] === 'function');
+          document.getElementById('load').innerHTML = `nx-cloud-base SDK loaded with ${features.join(', ')}`;
+        } catch (e) {
+          console.error(e);
+          document.getElementById('load').innerHTML = 'Error loading the Firebase SDK, check the console.';
+        }
+      });
+    </script>
+  </body>
+</html>
